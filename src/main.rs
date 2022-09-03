@@ -1,5 +1,6 @@
 use std::{env, process};
 mod tokenizer;
+// mod parser;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -20,12 +21,12 @@ fn main() {
 
     while !tokenizer::Token::at_eof(&tokens[index]) {
 
-        if tokenizer::Token::consume(&expression, &tokens[index], &mut index, '+') {
+        if tokenizer::Token::consume(&expression, &tokens[index], &mut index, &'+'.to_string()) {
             println!("  add rax, {}", tokenizer::Token::expect_number(&expression, &tokens[index], &mut index)); 
             continue;   
         }
 
-        tokenizer::Token::expect(&expression, &tokens[index], &mut index, '-');
+        tokenizer::Token::expect(&expression, &tokens[index], &mut index, &'-'.to_string());
         println!("  sub rax, {}", tokenizer::Token::expect_number(&expression, &tokens[index], &mut index));
     }
     

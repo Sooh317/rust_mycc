@@ -2,20 +2,20 @@
 
 #[derive(PartialEq)]
 #[derive(Debug)]
-pub enum TokenKind {
-    TKReserved, 
+pub enum TokenKind<'a> {
+    TKReserved(&'a str), 
     TKNum(i32), 
     TKEof, 
 }
 
 #[derive(Debug)]
-pub struct Token {
+pub struct Token<'a>{
     pub index : usize,
     pub next_index : usize, 
-    pub kind : TokenKind,
+    pub kind : TokenKind<'a>,
 }
 
-impl Token {
+impl<'a> Token<'a>{
     pub fn new(kind : TokenKind, index : usize, next_index : usize) -> Token{
         Token {
             kind, 
@@ -24,22 +24,34 @@ impl Token {
         }
     }
 
-    pub fn consume(s : &str, token : &Token, index : &mut usize, op : char) -> bool {
-        // println!("kind -> {:?}, s[index] -> {}", token.kind, s.as_bytes()[token.index]);
-        if token.kind != TokenKind::TKReserved || s.as_bytes()[token.index] != op as u8 {
-            return false;
+    pub fn consume(_s : &str, token : &Token, index : &mut usize, op : &str) -> bool {
+        match token.kind {
+            TokenKind::TKReserved(sig) => {
+                if sig == op {
+                    *index += 1;
+                    return true
+                }
+                else {
+                    false
+                }
+            }
+            _ => false
         }
-        *index += 1;
-        true
     }
 
-    pub fn expect(s : &str, token : &Token, index : &mut usize, op : char) -> () {
-        if token.kind != TokenKind::TKReserved || s.as_bytes()[token.index] != op as u8 {
-            eprintln!("{}", s);
-            eprintln!("{}^{}ではありません", " ".repeat(token.index), op);
-            std::process::exit(1);
+    pub fn expect(s : &str, token : &Token, index : &mut usize, op : &str) -> () {
+        match token.kind {
+            TokenKind::TKReserved(sig) => {
+                if sig == op {
+                    *index += 1;
+                    return ();
+                }
+            }
+            _ => ()
         }
-        *index += 1;
+        eprintln!("{}", s);
+        eprintln!("{}^{}ではありません", " ".repeat(token.index), op);
+        std::process::exit(1);
     }
 
     pub fn expect_number(s : &str, token : &Token, index : &mut usize) -> i32 {
@@ -56,15 +68,15 @@ impl Token {
 
     pub fn at_eof(token : &Token) -> bool { token.kind == TokenKind::TKEof }
 
-    pub fn tokenize(s : &str) -> Vec<Token> {
-        let mut sequence : Vec<Token> = Vec::new();
+    pub fn tokenize(s : &'a str) -> Vec<Token<'a>> {
+        let mut sequence : Vec<Token<'a>> = Vec::new();
         let mut next = 0;
         for (i, c) in s.chars().enumerate() {
             if next > i || char::is_whitespace(c) {
                 continue;
             }
-            if c == '+' || c == '-' {
-                sequence.push(Token::new(TokenKind::TKReserved, i, i + 1));
+            if c == '+' || c == '-'{
+                sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
                 continue;
             }
             if char::is_digit(c, 10) {
