@@ -1,6 +1,6 @@
 use std::{env, process};
 mod tokenizer;
-// mod parser;
+mod parser;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -12,24 +12,52 @@ fn main() {
 
     let expression = &args[1];
     let tokens = tokenizer::Token::tokenize(expression);
-    let mut index = 0;
+    // println!("{:?}", tokens);
+    let ast_tree = parser::Node::parse(expression, &tokens);
+    let index = ast_tree.len() - 1;
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
-    println!("  mov rax, {}", tokenizer::Token::expect_number(&expression, &tokens[index], &mut index));
 
-    while !tokenizer::Token::at_eof(&tokens[index]) {
+    generate_code(&ast_tree, &index);
 
-        if tokenizer::Token::consume(&expression, &tokens[index], &mut index, &'+'.to_string()) {
-            println!("  add rax, {}", tokenizer::Token::expect_number(&expression, &tokens[index], &mut index)); 
-            continue;   
-        }
-
-        tokenizer::Token::expect(&expression, &tokens[index], &mut index, &'-'.to_string());
-        println!("  sub rax, {}", tokenizer::Token::expect_number(&expression, &tokens[index], &mut index));
-    }
-    
+    println!("  pop rax");
     println!("  ret");
 
+}
+
+fn generate_code(ast_tree : &Vec<parser::Node>, index : &usize) -> () {
+    if ast_tree.len() <= *index { return (); }
+
+    let node = &ast_tree[*index];
+    // println!("{:?}", node);
+
+    generate_code(ast_tree, &node.left_index);
+    generate_code(ast_tree, &node.right_index);
+
+    match node.kind {
+        parser::NodeKind::NDAdd => {
+            println!("  pop rdi\n  pop rax");
+            println!("  add rax, rdi");
+            println!("  push rax");
+        }
+        parser::NodeKind::NDSub => {
+            println!("  pop rdi\n  pop rax");
+            println!("  sub rax, rdi");
+            println!("  push rax");
+        }
+        parser::NodeKind::NDMul => {
+            println!("  pop rdi\n  pop rax");
+            println!("  imul rax, rdi");
+            println!("  push rax")
+        }
+        parser::NodeKind::NDDiv => {
+            println!("  pop rdi\n  pop rax");
+            println!("  cqo");
+            println!("  idiv rdi");
+            println!("  push rax")
+        },
+        parser::NodeKind::NDNum(val) => println!("  push {}", val),
+    }
 }

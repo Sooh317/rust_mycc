@@ -75,7 +75,7 @@ impl<'a> Token<'a>{
             if next > i || char::is_whitespace(c) {
                 continue;
             }
-            if c == '+' || c == '-'{
+            if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
                 continue;
             }
