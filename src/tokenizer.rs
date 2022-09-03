@@ -34,19 +34,21 @@ impl Token {
     }
 
     pub fn expect(s : &str, token : &Token, index : &mut usize, op : char) -> () {
-        *index += 1;
         if token.kind != TokenKind::TKReserved || s.as_bytes()[token.index] != op as u8 {
-            eprintln!("{}ではありません", op);
+            eprintln!("{}", s);
+            eprintln!("{}^{}ではありません", " ".repeat(token.index), op);
             std::process::exit(1);
         }
+        *index += 1;
     }
 
-    pub fn expect_number(token : &Token, index : &mut usize) -> i32 {
+    pub fn expect_number(s : &str, token : &Token, index : &mut usize) -> i32 {
         *index += 1;
         match token.kind {
             TokenKind::TKNum(val) => val,
             _ => {
-                eprintln!("数ではありません");
+                eprintln!("{}", s);
+                eprintln!("{}^数ではありません", " ".repeat(token.index));
                 std::process::exit(1);
             }
         }
