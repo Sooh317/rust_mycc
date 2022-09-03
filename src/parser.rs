@@ -51,14 +51,14 @@ impl Node {
     }
 
     fn mul(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
-        let mut left_index = Node::primary(s, tokens, index, tree);
+        let mut left_index = Node::unary(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, &'*'.to_string()) {
-                let right_index = Node::primary(s, tokens, index, tree);
+                let right_index = Node::unary(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDMul, left_index, right_index));
             }   
             else if Token::consume(s, &tokens[*index], index, &'/'.to_string()) {
-                let right_index = Node::primary(s, tokens, index, tree);
+                let right_index = Node::unary(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDDiv, left_index, right_index));
             }   
             else {
@@ -66,6 +66,20 @@ impl Node {
             }
             left_index = tree.len() - 1;
         }
+    }
+
+    fn unary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        let token = &tokens[*index];
+        // -x = 0 - x
+        if Token::consume(s, token, index, &'-'.to_string()) {
+            let lnode = Node::new_num(0);
+            let left_index = tree.len();
+            tree.push(lnode);
+            let right_index = Node::primary(s, tokens, index, tree);
+            tree.push(Node::new(NodeKind::NDSub, left_index, right_index));
+            return tree.len() - 1;
+        }
+        return Node::primary(s, tokens, index, tree);
     }
 
     fn primary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
