@@ -66,6 +66,12 @@ impl<'a> Token<'a>{
         }
     }
 
+    fn error_msg(s : &str, pos : usize, msg : &str) -> () {
+        eprintln!("{}", s);
+        eprintln!("{}^{}", " ".repeat(pos), msg);
+        std::process::exit(1);
+    }
+
     pub fn at_eof(token : &Token) -> bool { token.kind == TokenKind::TKEof }
 
     pub fn tokenize(s : &'a str) -> Vec<Token<'a>> {
@@ -78,6 +84,18 @@ impl<'a> Token<'a>{
             if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
                 continue;
+            }
+            if c == '>' || c == '<' || c == '=' || c == '!' {
+                if i + 1 >= s.len() { Token::error_msg(s, i+1, "式になっていません"); }
+                if &s[i+1..i+2] == &'='.to_string() {
+                    sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+2]), i, i + 2));
+                    next = i + 2;
+                    continue;
+                }
+                else {
+                    sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
+                    continue;
+                }
             }
             if char::is_digit(c, 10) {
                 let result = strtol(&s[i..]);

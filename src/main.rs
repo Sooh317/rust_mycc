@@ -14,6 +14,7 @@ fn main() {
     let tokens = tokenizer::Token::tokenize(expression);
     // println!("{:?}", tokens);
     let ast_tree = parser::Node::parse(expression, &tokens);
+    // println!("{:?}", ast_tree);
     let index = ast_tree.len() - 1;
 
     println!(".intel_syntax noprefix");
@@ -57,7 +58,35 @@ fn generate_code(ast_tree : &Vec<parser::Node>, index : &usize) -> () {
             println!("  cqo");
             println!("  idiv rdi");
             println!("  push rax")
-        },
+        }
+        parser::NodeKind::NDEq => {
+            println!("  pop rdi\n  pop rax");
+            println!("  cmp rax, rdi");
+            println!("  sete al");
+            println!("  movzb rax, al");
+            println!("  push rax");
+        }
+        parser::NodeKind::NDNEq => {
+            println!("  pop rdi\n  pop rax");
+            println!("  cmp rax, rdi");
+            println!("  setne al");
+            println!("  movzb rax, al");
+            println!("  push rax");
+        }
+        parser::NodeKind::NDLeEq => {
+            println!("  pop rdi\n  pop rax");
+            println!("  cmp rax, rdi");
+            println!("  setle al");
+            println!("  movzb rax, al");
+            println!("  push rax");
+        }
+        parser::NodeKind::NDLe => {
+            println!("  pop rdi\n  pop rax");
+            println!("  cmp rax, rdi");
+            println!("  setl al");
+            println!("  movzb rax, al");
+            println!("  push rax");
+        }
         parser::NodeKind::NDNum(val) => println!("  push {}", val),
     }
 }

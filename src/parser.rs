@@ -6,6 +6,10 @@ pub enum NodeKind {
     NDSub, 
     NDMul, 
     NDDiv, 
+    NDLe,
+    NDLeEq,
+    NDEq,
+    NDNEq,
     NDNum(i32),
 }
 
@@ -33,13 +37,61 @@ impl Node {
     }
 
     fn expr(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        Node::equality(s, tokens, index, tree)
+    }
+
+    fn equality(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        let mut left_index = Node::relational(s, tokens, index, tree);
+        loop {
+            if Token::consume(s, &tokens[*index], index, "==") {
+                let right_index = Node::relational(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDEq, left_index, right_index));
+            }   
+            else if Token::consume(s, &tokens[*index], index, "!=") {
+                let right_index = Node::relational(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDNEq, left_index, right_index));
+            }   
+            else {
+                return tree.len() - 1;
+            }
+            left_index = tree.len() - 1;
+        }
+    }
+
+    fn relational(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        let mut left_index = Node::add(s, tokens, index, tree);
+        loop {
+            if Token::consume(s, &tokens[*index], index, "<=") {
+                let right_index = Node::add(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDLeEq, left_index, right_index));
+            }   
+            else if Token::consume(s, &tokens[*index], index, "<") {
+                let right_index = Node::add(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDLe, left_index, right_index));
+            }   
+            else if Token::consume(s, &tokens[*index], index, ">=") {
+                let right_index = Node::add(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDLeEq, right_index, left_index));
+            }   
+            else if Token::consume(s, &tokens[*index], index, ">") {
+                let right_index = Node::add(s, tokens, index, tree);
+                tree.push(Node::new(NodeKind::NDLe, right_index, left_index));
+            }   
+            else {
+                return tree.len() - 1;
+            }
+            left_index = tree.len() - 1;
+        }
+    }
+
+    fn add(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
         let mut left_index = Node::mul(s, tokens, index, tree);
         loop {
-            if Token::consume(s, &tokens[*index], index, &'+'.to_string()) {
+            if Token::consume(s, &tokens[*index], index, "+") {
                 let right_index = Node::mul(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDAdd, left_index, right_index));
             }   
-            else if Token::consume(s, &tokens[*index], index, &'-'.to_string()) {
+            else if Token::consume(s, &tokens[*index], index, "-") {
                 let right_index = Node::mul(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDSub, left_index, right_index));
             }   
@@ -53,11 +105,11 @@ impl Node {
     fn mul(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
         let mut left_index = Node::unary(s, tokens, index, tree);
         loop {
-            if Token::consume(s, &tokens[*index], index, &'*'.to_string()) {
+            if Token::consume(s, &tokens[*index], index, "*") {
                 let right_index = Node::unary(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDMul, left_index, right_index));
             }   
-            else if Token::consume(s, &tokens[*index], index, &'/'.to_string()) {
+            else if Token::consume(s, &tokens[*index], index, "/") {
                 let right_index = Node::unary(s, tokens, index, tree);
                 tree.push(Node::new(NodeKind::NDDiv, left_index, right_index));
             }   
@@ -71,7 +123,7 @@ impl Node {
     fn unary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
         let token = &tokens[*index];
         // -x = 0 - x
-        if Token::consume(s, token, index, &'-'.to_string()) {
+        if Token::consume(s, token, index, "-") {
             let lnode = Node::new_num(0);
             let left_index = tree.len();
             tree.push(lnode);
@@ -84,11 +136,11 @@ impl Node {
 
     fn primary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
         let token = &tokens[*index];
-        if Token::consume(s, token, index, &'('.to_string()) {
+        if Token::consume(s, token, index, "(") {
             let id = Node::expr(s, tokens, index, tree);
 
             let token = &tokens[*index];
-            Token::expect(s, token, index, &')'.to_string());
+            Token::expect(s, token, index, ")");
             
             return id;
         }
