@@ -4,6 +4,7 @@
 #[derive(Debug)]
 pub enum TokenKind<'a> {
     TKReserved(&'a str), 
+    TKIdent(&'a str),
     TKNum(i32), 
     TKEof, 
 }
@@ -81,11 +82,11 @@ impl<'a> Token<'a>{
             if next > i || char::is_whitespace(c) {
                 continue;
             }
-            if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' {
+            else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ';' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
                 continue;
             }
-            if c == '>' || c == '<' || c == '=' || c == '!' {
+            else if c == '>' || c == '<' || c == '=' || c == '!' {
                 if i + 1 >= s.len() { Token::error_msg(s, i+1, "式になっていません"); }
                 if &s[i+1..i+2] == &'='.to_string() {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+2]), i, i + 2));
@@ -97,7 +98,11 @@ impl<'a> Token<'a>{
                     continue;
                 }
             }
-            if char::is_digit(c, 10) {
+            else if c.is_ascii_alphabetic() {
+                sequence.push(Token::new(TokenKind::TKIdent(&s[i..i+1]), i, i + 1));
+                continue;
+            }
+            else if c.is_ascii_digit() {
                 let result = strtol(&s[i..]);
                 next = i + result.len();
                 sequence.push(Token::new(TokenKind::TKNum(result.parse().unwrap()), i, next));
@@ -113,7 +118,7 @@ impl<'a> Token<'a>{
 
 pub fn strtol(s : &str) -> &str {
     for (i, c) in s.chars().enumerate() {
-        if !char::is_digit(c, 10) {
+        if !c.is_ascii_digit() {
             return &s[..i]
         }
     }

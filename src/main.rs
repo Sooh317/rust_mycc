@@ -14,17 +14,24 @@ fn main() {
     let expression = &args[1];
     let tokens = tokenizer::Token::tokenize(expression);
     // println!("{:?}", tokens);
-    let ast_tree = parser::Node::parse(expression, &tokens);
-    // println!("{:?}", ast_tree);
-    let index = ast_tree.len() - 1;
+    let ast_trees = parser::Node::parse(expression, &tokens);
+    // println!("{:?}", ast_trees);
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
     println!("main:");
+    println!("  push rbp");
+    println!("  mov rbp, rsp");
+    println!("  sub rsp, 208");
 
-    codegen::generate_code(&ast_tree, &index);
+    for ast_tree in ast_trees {
+        let index = ast_tree.len() - 1;
+        codegen::generate_code(&ast_tree, &index);
+        println!("  pop rax");
+    }
 
-    println!("  pop rax");
+    println!("  mov rsp, rbp");
+    println!("  pop rbp");
     println!("  ret");
 
 }

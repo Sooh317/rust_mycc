@@ -1,4 +1,4 @@
-use crate::tokenizer::Token;
+use crate::tokenizer::{Token, TokenKind};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum NodeKind {
@@ -9,6 +9,8 @@ pub enum NodeKind {
     NDLe,
     NDLeEq,
     NDEq,
+    NDAs, // assign
+    NDLVa(i32), // local variable(offset from RBP)
     NDNEq,
     NDNum(i32),
 }
@@ -21,23 +23,56 @@ pub struct Node {
 }
 
 impl Node {
-    pub fn new(kind: NodeKind, left_index: usize, right_index: usize) -> Node {
+    fn new(kind: NodeKind, left_index: usize, right_index: usize) -> Node {
         Node {
             kind, 
             left_index, 
             right_index,
         }
     }
-    pub fn new_num(val : i32) -> Node {
+    fn new_num(val : i32) -> Node {
         Node {
             kind : NodeKind::NDNum(val),
             left_index : std::usize::MAX,
             right_index : std::usize::MAX,
         }
     }
+    fn new_lvar(name : &str) -> Node {
+        Node {
+            kind : NodeKind::NDLVa((name.as_bytes()[0] - 96) as i32 * 8),
+            left_index : std::usize::MAX,
+            right_index : std::usize::MAX,
+        }
+    }
+
+    fn program(s : &str, tokens : &Vec<Token>, index : &mut usize) -> Vec<Vec<Node>> {
+        let mut code : Vec<Vec<Node>> = Vec::new();
+        while !Token::at_eof(&tokens[*index]) {
+            let mut tree : Vec<Node> = Vec::new();
+            Node::stmt(s, tokens, index, &mut tree);
+            code.push(tree)
+        }
+        code
+    }
+
+    fn stmt(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        let left_index = Node::expr(s, tokens, index, tree);
+        Token::expect(s, &tokens[*index], index, ";");
+        left_index
+    }
 
     fn expr(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
-        Node::equality(s, tokens, index, tree)
+        Node::assign(s, tokens, index, tree)
+    }
+
+    fn assign(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+        let left_index = Node::equality(s, tokens, index, tree);
+        let token = &tokens[*index];
+        if Token::consume(s, token, index, "=") {
+            let right_index = Node::assign(s, tokens, index, tree);
+            tree.push(Node::new(NodeKind::NDAs, left_index, right_index));
+        }
+        tree.len() - 1
     }
 
     fn equality(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
@@ -131,7 +166,10 @@ impl Node {
             tree.push(Node::new(NodeKind::NDSub, left_index, right_index));
             return tree.len() - 1;
         }
-        return Node::primary(s, tokens, index, tree);
+        else {
+            Token::consume(s, token, index, "+");
+            return Node::primary(s, tokens, index, tree);
+        }
     }
 
     fn primary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
@@ -144,14 +182,23 @@ impl Node {
             
             return id;
         }
-        tree.push(Node::new_num(Token::expect_number(s, token, index)));
+        else{
+            match token.kind {
+                TokenKind::TKIdent(lvar_name) => {
+                    *index += lvar_name.len();
+                    tree.push(Node::new_lvar(lvar_name));
+                }
+                _ => {
+                    tree.push(Node::new_num(Token::expect_number(s, token, index)));
+                }
+            }
+        }
         return tree.len() - 1;
     }
 
-    pub fn parse(s : &str, tokens : &Vec<Token>) -> Vec<Node> {
-        let mut tree : Vec<Node> = Vec::new();
+    pub fn parse(s : &str, tokens : &Vec<Token>) -> Vec<Vec<Node>> {
         let mut index = 0;
-        Node::expr(s, tokens, &mut index, &mut tree);
+        let tree = Node::program(s, tokens, &mut index);
         tree
     }
 }
