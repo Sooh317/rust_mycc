@@ -6,7 +6,6 @@ pub enum TokenKind<'a> {
     TKReserved(&'a str), 
     TKIdent(&'a str),
     TKNum(i32), 
-    TKRet,
     TKEof, 
 }
 
@@ -104,8 +103,8 @@ impl<'a> Token<'a>{
                     next = i + 1 + j;
                     break;
                 }
-                if &s[i..next] == "return" {
-                    sequence.push(Token::new(TokenKind::TKRet, i, next));
+                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" {
+                    sequence.push(Token::new(TokenKind::TKReserved(&s[i..next]), i, next));
                 }
                 else {
                     sequence.push(Token::new(TokenKind::TKIdent(&s[i..next]), i, next));

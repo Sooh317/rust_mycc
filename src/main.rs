@@ -24,9 +24,10 @@ fn main() {
     println!("  mov rbp, rsp");
     println!("  sub rsp, 208");
 
+    let mut branch_num = 0;
     for ast_tree in ast_trees {
         let index = ast_tree.len() - 1;
-        codegen::generate_code(&ast_tree, &index);
+        codegen::generate_code(&ast_tree, &index, &mut branch_num);
         println!("  pop rax");
     }
 

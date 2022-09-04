@@ -1,6 +1,6 @@
 use crate::parser::{NodeKind, Node};
 
-pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
+pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i32) -> () {
     if ast_tree.len() <= *index { return (); }
     
     let node = &ast_tree[*index];
@@ -8,7 +8,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
 
     match node.kind {
         NodeKind::NDRet => {
-            generate_code(ast_tree, &node.left_index);
+            generate_code(ast_tree, &node.left_index, branch_num);
             println!("  pop rax");
             println!("  mov rsp, rbp");
             println!("  pop rbp");
@@ -24,7 +24,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
         }
         NodeKind::NDAs => {
             generate_lval(ast_tree, &node.left_index); // -> rax
-            generate_code(ast_tree, &node.right_index); // -> rdi
+            generate_code(ast_tree, &node.right_index, branch_num); // -> rdi
             println!("  pop rdi\n  pop rax");
             println!("  mov [rax], rdi");
             println!("  push rdi");
@@ -34,12 +34,24 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
             println!("  push {}", val);
             return ();
         }
-
+        NodeKind::NDIf => {
+            generate_code(ast_tree, &node.cond_index, branch_num);
+            let use_num = *branch_num;
+            *branch_num += 1;
+            println!("  pop rax");
+            println!("  cmp rax, 0");
+            println!("  je  .Lelse{}", use_num);
+            generate_code(ast_tree, &node.left_index, branch_num);
+            println!("  jmp .Lend{}", use_num);
+            println!(".Lelse{}:", use_num);
+            generate_code(ast_tree, &node.right_index, branch_num);
+            println!(".Lend{}:", use_num);
+        }
         _ => (),
     }
 
-    generate_code(ast_tree, &node.left_index);
-    generate_code(ast_tree, &node.right_index);
+    generate_code(ast_tree, &node.left_index, branch_num);
+    generate_code(ast_tree, &node.right_index, branch_num);
 
     println!("  pop rdi\n  pop rax");
 

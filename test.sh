@@ -39,6 +39,11 @@ assert 14 'a = 3; b = 5 * 6 - 8; a + b / 2;'
 assert 1 'a = 0; b = a == 0; c = a + b + 2; d = c > 2;'
 assert 6 'foo = 1; bar = 2 + 3; foo + bar;'
 assert 4 'a = 2; aa = 4; foo = a * aa - aa; hoge = foo / 2 + a;'
+assert 4 'return 4;'
 assert 3 'return 3 + 4 / 2 * 2 - 3 + (-(9)) + -2 + 10;'
 assert 4 'a = 2; aa = 4; foo = a * aa - aa; return foo;'
+assert 1 'if (1 == 1) return 1; else return 2;'
+assert 4 'if (2 >= 4 - 3*2 + 2) return 4; else return 100;'
+assert 3 'if (2 < 4 - 3*2 + 2) return 4; else if(2 == 3) return 1; else return 3 + 4 / 2 * 2 - 3 + (-(9)) + -2 + 10;'
+
 echo OK
