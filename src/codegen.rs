@@ -78,6 +78,14 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!(".Lend{}:", use_num);
             return;
         }
+        NodeKind::NDBlock => {
+            for index in &node.indices {
+                generate_code(ast_tree, index, branch_num);
+                println!("  pop rax");
+            }
+            println!("  push rax");
+            return;
+        }
         _ => (),
     }
 

@@ -17,6 +17,7 @@ pub enum NodeKind<'a> {
     NDIf, 
     NDWh, 
     NDFor,
+    NDBlock, // code block
     NDNum(i32),
 }
 
@@ -56,7 +57,15 @@ impl<'a> Node<'a> {
 
     fn stmt(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let token = &tokens[*index];
-        if Token::consume(s, token, index, "return") {
+        if Token::consume(s, token, index, "{") {
+            let mut vec : Vec<usize> = Vec::new();
+            while !Token::consume(s, &tokens[*index], index, "}") {
+                let index = Node::stmt(s, tokens, index, tree);
+                vec.push(index);
+            }
+            tree.push(Node::new(NodeKind::NDBlock, vec));
+        }
+        else if Token::consume(s, token, index, "return") {
             let left_index = Node::expr(s, tokens, index, tree);
             tree.push(Node::new_ret(left_index));
             Token::expect(s, &tokens[*index], index, ";");
