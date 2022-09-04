@@ -7,6 +7,14 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
     // println!("{:?}", node);
 
     match node.kind {
+        NodeKind::NDRet => {
+            generate_code(ast_tree, &node.left_index);
+            println!("  pop rax");
+            println!("  mov rsp, rbp");
+            println!("  pop rbp");
+            println!("  ret");
+            return ();
+        }
         NodeKind::NDLVa(_, _) => { // When variable occurs in the context of expressions, the value is stored in the stack.
             generate_lval(ast_tree, index);
             println!("  pop rax");

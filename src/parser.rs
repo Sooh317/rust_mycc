@@ -13,6 +13,7 @@ pub enum NodeKind<'a> {
     NDAs, // assign
     NDLVa(&'a str, i32), // local variable(offset from RBP)
     NDNEq,
+    NDRet,
     NDNum(i32),
 }
 
@@ -24,7 +25,7 @@ pub struct Node<'a> {
 }
 
 impl<'a> Node<'a> {
-    fn new(kind: NodeKind, left_index: usize, right_index: usize) -> Node {
+    fn new(kind: NodeKind<'a>, left_index: usize, right_index: usize) -> Node<'a> {
         Node {
             kind, 
             left_index, 
@@ -32,18 +33,13 @@ impl<'a> Node<'a> {
         }
     }
     fn new_num(val : i32) -> Node<'a> {
-        Node {
-            kind : NodeKind::NDNum(val),
-            left_index : std::usize::MAX,
-            right_index : std::usize::MAX,
-        }
+        Node::new(NodeKind::NDNum(val), std::usize::MAX, std::usize::MAX)
     }
-    fn new_lvar(name : &str) -> Node {
-        Node {
-            kind : NodeKind::NDLVa(name, -1),
-            left_index : std::usize::MAX,
-            right_index : std::usize::MAX,
-        }
+    fn new_lvar(name : &'a str) -> Node<'a> {
+        Node::new(NodeKind::NDLVa(name, -1), std::usize::MAX, std::usize::MAX)
+    }
+    fn new_ret(left_index : usize) -> Node<'a> {
+        Node::new(NodeKind::NDRet, left_index, std::usize::MAX)
     }
 
     fn program(s : &str, tokens : &'a Vec<Token>, index : &mut usize) -> Vec<Vec<Node<'a>>> {
@@ -57,7 +53,19 @@ impl<'a> Node<'a> {
     }
 
     fn stmt(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
-        let left_index = Node::expr(s, tokens, index, tree);
+        let token = &tokens[*index];
+        let mut left_index;
+        match token.kind {
+            TokenKind::TKRet => {
+                *index += 1;
+                left_index = Node::expr(s, tokens, index, tree);
+                tree.push(Node::new_ret(left_index));
+                left_index = tree.len() - 1;
+            }
+            _ => {
+                left_index = Node::expr(s, tokens, index, tree);
+            }
+        }
         Token::expect(s, &tokens[*index], index, ";");
         left_index
     }

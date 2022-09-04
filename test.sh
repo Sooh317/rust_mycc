@@ -39,5 +39,6 @@ assert 14 'a = 3; b = 5 * 6 - 8; a + b / 2;'
 assert 1 'a = 0; b = a == 0; c = a + b + 2; d = c > 2;'
 assert 6 'foo = 1; bar = 2 + 3; foo + bar;'
 assert 4 'a = 2; aa = 4; foo = a * aa - aa; hoge = foo / 2 + a;'
-
+assert 3 'return 3 + 4 / 2 * 2 - 3 + (-(9)) + -2 + 10;'
+assert 4 'a = 2; aa = 4; foo = a * aa - aa; return foo;'
 echo OK

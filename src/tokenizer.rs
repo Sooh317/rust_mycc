@@ -6,6 +6,7 @@ pub enum TokenKind<'a> {
     TKReserved(&'a str), 
     TKIdent(&'a str),
     TKNum(i32), 
+    TKRet,
     TKEof, 
 }
 
@@ -86,18 +87,15 @@ impl<'a> Token<'a>{
             }
             else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ';' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
-                continue;
             }
             else if c == '>' || c == '<' || c == '=' || c == '!' {
                 if i + 1 >= s.len() { Token::error_msg(s, i+1, "式になっていません"); }
                 if &s[i+1..i+2] == &'='.to_string() {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+2]), i, i + 2));
                     next = i + 2;
-                    continue;
                 }
                 else {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
-                    continue;
                 }
             }
             else if c.is_ascii_alphabetic() {
@@ -106,14 +104,17 @@ impl<'a> Token<'a>{
                     next = i + 1 + j;
                     break;
                 }
-                sequence.push(Token::new(TokenKind::TKIdent(&s[i..next]), i, next));
-                continue;
+                if &s[i..next] == "return" {
+                    sequence.push(Token::new(TokenKind::TKRet, i, next));
+                }
+                else {
+                    sequence.push(Token::new(TokenKind::TKIdent(&s[i..next]), i, next));
+                }
             }
             else if c.is_ascii_digit() {
                 let result = strtol(&s[i..]);
                 next = i + result.len();
                 sequence.push(Token::new(TokenKind::TKNum(result.parse().unwrap()), i, next));
-                continue;
             }
         }
         sequence.push(Token::new(TokenKind::TKEof, s.len(), s.len()));
