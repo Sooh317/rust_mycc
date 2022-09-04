@@ -1,6 +1,6 @@
 
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 #[derive(Debug)]
 pub enum TokenKind<'a> {
     TKReserved(&'a str), 
@@ -32,7 +32,7 @@ impl<'a> Token<'a>{
             TokenKind::TKReserved(sig) => {
                 if sig == op {
                     *index += 1;
-                    return true
+                    true
                 }
                 else {
                     false
@@ -42,15 +42,12 @@ impl<'a> Token<'a>{
         }
     }
 
-    pub fn expect(s : &str, token : &Token, index : &mut usize, op : &str) -> () {
-        match token.kind {
-            TokenKind::TKReserved(sig) => {
-                if sig == op {
-                    *index += 1;
-                    return ();
-                }
+    pub fn expect(s : &str, token : &Token, index : &mut usize, op : &str) {
+        if let TokenKind::TKReserved(sig) = token.kind {
+            if sig == op {
+                *index += 1;
+                return;
             }
-            _ => ()
         }
         eprintln!("{}", s);
         eprintln!("{}^{}ではありません", " ".repeat(token.index), op);
@@ -69,7 +66,7 @@ impl<'a> Token<'a>{
         }
     }
 
-    fn error_msg(s : &str, pos : usize, msg : &str) -> () {
+    fn error_msg(s : &str, pos : usize, msg : &str) {
         eprintln!("{}", s);
         eprintln!("{}^{}", " ".repeat(pos), msg);
         std::process::exit(1);
@@ -89,7 +86,7 @@ impl<'a> Token<'a>{
             }
             else if c == '>' || c == '<' || c == '=' || c == '!' {
                 if i + 1 >= s.len() { Token::error_msg(s, i+1, "式になっていません"); }
-                if &s[i+1..i+2] == &'='.to_string() {
+                if &s[i+1..i+2] == "=" {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+2]), i, i + 2));
                     next = i + 2;
                 }
@@ -129,5 +126,5 @@ pub fn strtol(s : &str) -> &str {
             return &s[..i]
         }
     }
-    &s
+    s
 }

@@ -1,7 +1,7 @@
 use crate::parser::{NodeKind, Node};
 
-pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i32) -> () {
-    if ast_tree.len() <= *index { return (); }
+pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i32) {
+    if ast_tree.len() <= *index { return; }
     
     let node = &ast_tree[*index];
     // println!("{:?}", node);
@@ -13,14 +13,14 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!("  mov rsp, rbp");
             println!("  pop rbp");
             println!("  ret");
-            return ();
+            return;
         }
         NodeKind::NDLVa(_, _) => { // When variable occurs in the context of expressions, the value is stored in the stack.
             generate_lval(ast_tree, index);
             println!("  pop rax");
             println!("  mov rax, [rax]");
             println!("  push rax");
-            return ();
+            return;
         }
         NodeKind::NDAs => {
             generate_lval(ast_tree, &node.left_index); // -> rax
@@ -28,11 +28,11 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!("  pop rdi\n  pop rax");
             println!("  mov [rax], rdi");
             println!("  push rdi");
-            return ();
+            return;
         }
         NodeKind::NDNum(val) => {
             println!("  push {}", val);
-            return ();
+            return;
         }
         NodeKind::NDIf => {
             generate_code(ast_tree, &node.cond_index, branch_num);
@@ -95,7 +95,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
 }
 
 // push the address of a variable on the stack
-fn generate_lval(ast_tree : &Vec<Node>, index : &usize) -> () {
+fn generate_lval(ast_tree : &Vec<Node>, index : &usize) {
     let node = &ast_tree[*index];
     match node.kind {
         NodeKind::NDLVa(_, offset) => {

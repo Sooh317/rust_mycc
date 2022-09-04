@@ -183,11 +183,11 @@ impl<'a> Node<'a> {
             tree.push(lnode);
             let right_index = Node::primary(s, tokens, index, tree);
             tree.push(Node::new(NodeKind::NDSub, left_index, right_index, std::usize::MAX));
-            return tree.len() - 1;
+            tree.len() - 1
         }
         else {
             Token::consume(s, token, index, "+");
-            return Node::primary(s, tokens, index, tree);
+            Node::primary(s, tokens, index, tree)
         }
     }
 
@@ -212,7 +212,7 @@ impl<'a> Node<'a> {
                 }
             }
         }
-        return tree.len() - 1;
+        tree.len() - 1
     }
 
     pub fn parse(s : &str, tokens : &'a Vec<Token>) -> Vec<Vec<Node<'a>>> {
@@ -222,7 +222,7 @@ impl<'a> Node<'a> {
         tree
     }
 
-    fn assign_offset(trees : &mut Vec<Vec<Node>>) -> () {
+    fn assign_offset(trees : &mut Vec<Vec<Node>>) {
         let mut map = HashMap::new();
         for tree in trees {
             for node in tree {
