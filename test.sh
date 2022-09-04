@@ -49,5 +49,7 @@ assert 4 'if (2 >= 4 - 3*2 + 2) return 4; else return 100;'
 assert 3 'if (2 < 4 - 3*2 + 2) return 4; else if(2 == 3) return 1; else return 3 + 4 / 2 * 2 - 3 + (-(9)) + -2 + 10;'
 assert 4 'a = 5; while(a != 4) a = a - 1; return a;'
 assert 16 'a = 4; b = 0; while(b < 15) b = b + a; return b;' 
-
+assert 10 'sum = 0; for(i = 0; i <= 4; i = i + 1) sum = sum + i; return sum;'
+assert 5 'rem = 4; tmp = 0; for(; rem >= 0; rem = rem - 1) tmp = tmp + 1; return tmp;'
+assert 2 'a = 2; for(;;) return a;'
 echo OK

@@ -16,6 +16,7 @@ pub enum NodeKind<'a> {
     NDRet,
     NDIf, 
     NDWh, 
+    NDFor,
     NDNum(i32),
 }
 
@@ -25,6 +26,7 @@ pub struct Node<'a> {
     pub left_index : usize,
     pub right_index : usize,
     pub cond_index : usize,
+    pub stmt_index : usize,
 }
 
 impl<'a> Node<'a> {
@@ -34,6 +36,7 @@ impl<'a> Node<'a> {
             left_index, 
             right_index,
             cond_index,
+            stmt_index : std::usize::MAX,
         }
     }
     fn new_num(val : i32) -> Node<'a> {
@@ -82,6 +85,32 @@ impl<'a> Node<'a> {
             let right_index = std::usize::MAX;
             tree.push(Node::new(NodeKind::NDWh, left_index, right_index, cond_index));
         }
+        else if Token::consume(s, token, index, "for") {
+            let mut left_index = std::usize::MAX;
+            let mut right_index = std::usize::MAX;
+            let mut cond_index = std::usize::MAX;
+
+            Token::expect(s, &tokens[*index], index, "(");
+            if !Token::consume(s, &tokens[*index], index, ";") {
+                left_index = Node::expr(s, tokens, index, tree);
+                Token::expect(s, &tokens[*index], index, ";");
+            }
+
+            if !Token::consume(s, &tokens[*index], index, ";") {
+                cond_index = Node::expr(s, tokens, index, tree);
+                Token::expect(s, &tokens[*index], index, ";");
+            }
+
+            if !Token::consume(s, &tokens[*index], index, ")") {
+                right_index = Node::expr(s, tokens, index, tree);
+                Token::expect(s, &tokens[*index], index, ")");
+            }
+
+            let stmt_index = Node::stmt(s, tokens, index, tree);
+            let mut node = Node::new(NodeKind::NDFor, left_index, right_index, cond_index);
+            node.stmt_index = stmt_index;
+            tree.push(node);
+        }   
         else {
             Node::expr(s, tokens, index, tree);
             Token::expect(s, &tokens[*index], index, ";");
