@@ -7,7 +7,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
     // println!("{:?}", node);
 
     match node.kind {
-        NodeKind::NDLVa(_) => { // When variable occurs in the context of expressions, the value is stored in the stack.
+        NodeKind::NDLVa(_, _) => { // When variable occurs in the context of expressions, the value is stored in the stack.
             generate_lval(ast_tree, index);
             println!("  pop rax");
             println!("  mov rax, [rax]");
@@ -78,7 +78,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize) -> () {
 fn generate_lval(ast_tree : &Vec<Node>, index : &usize) -> () {
     let node = &ast_tree[*index];
     match node.kind {
-        NodeKind::NDLVa(offset) => {
+        NodeKind::NDLVa(_, offset) => {
             println!("  mov rax, rbp");
             println!("  sub rax, {}", offset);
             println!("  push rax");

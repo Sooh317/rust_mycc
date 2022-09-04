@@ -16,6 +16,8 @@ pub struct Token<'a>{
     pub kind : TokenKind<'a>,
 }
 
+
+
 impl<'a> Token<'a>{
     pub fn new(kind : TokenKind, index : usize, next_index : usize) -> Token{
         Token {
@@ -99,7 +101,12 @@ impl<'a> Token<'a>{
                 }
             }
             else if c.is_ascii_alphabetic() {
-                sequence.push(Token::new(TokenKind::TKIdent(&s[i..i+1]), i, i + 1));
+                for (j, d) in (&s[i+1..]).chars().enumerate() {
+                    if d.is_ascii_alphabetic() || d.is_ascii_digit() || d == '_' { continue;}
+                    next = i + 1 + j;
+                    break;
+                }
+                sequence.push(Token::new(TokenKind::TKIdent(&s[i..next]), i, next));
                 continue;
             }
             else if c.is_ascii_digit() {

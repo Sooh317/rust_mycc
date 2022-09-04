@@ -1,7 +1,8 @@
 use crate::tokenizer::{Token, TokenKind};
+use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum NodeKind {
+pub enum NodeKind<'a> {
     NDAdd, 
     NDSub, 
     NDMul, 
@@ -10,19 +11,19 @@ pub enum NodeKind {
     NDLeEq,
     NDEq,
     NDAs, // assign
-    NDLVa(i32), // local variable(offset from RBP)
+    NDLVa(&'a str, i32), // local variable(offset from RBP)
     NDNEq,
     NDNum(i32),
 }
 
 #[derive(Debug)]
-pub struct Node {
-    pub kind : NodeKind,
+pub struct Node<'a> {
+    pub kind : NodeKind<'a>,
     pub left_index : usize,
     pub right_index : usize,
 }
 
-impl Node {
+impl<'a> Node<'a> {
     fn new(kind: NodeKind, left_index: usize, right_index: usize) -> Node {
         Node {
             kind, 
@@ -30,7 +31,7 @@ impl Node {
             right_index,
         }
     }
-    fn new_num(val : i32) -> Node {
+    fn new_num(val : i32) -> Node<'a> {
         Node {
             kind : NodeKind::NDNum(val),
             left_index : std::usize::MAX,
@@ -39,13 +40,13 @@ impl Node {
     }
     fn new_lvar(name : &str) -> Node {
         Node {
-            kind : NodeKind::NDLVa((name.as_bytes()[0] - 96) as i32 * 8),
+            kind : NodeKind::NDLVa(name, -1),
             left_index : std::usize::MAX,
             right_index : std::usize::MAX,
         }
     }
 
-    fn program(s : &str, tokens : &Vec<Token>, index : &mut usize) -> Vec<Vec<Node>> {
+    fn program(s : &str, tokens : &'a Vec<Token>, index : &mut usize) -> Vec<Vec<Node<'a>>> {
         let mut code : Vec<Vec<Node>> = Vec::new();
         while !Token::at_eof(&tokens[*index]) {
             let mut tree : Vec<Node> = Vec::new();
@@ -55,17 +56,17 @@ impl Node {
         code
     }
 
-    fn stmt(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn stmt(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let left_index = Node::expr(s, tokens, index, tree);
         Token::expect(s, &tokens[*index], index, ";");
         left_index
     }
 
-    fn expr(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn expr(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         Node::assign(s, tokens, index, tree)
     }
 
-    fn assign(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn assign(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let left_index = Node::equality(s, tokens, index, tree);
         let token = &tokens[*index];
         if Token::consume(s, token, index, "=") {
@@ -75,7 +76,7 @@ impl Node {
         tree.len() - 1
     }
 
-    fn equality(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn equality(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let mut left_index = Node::relational(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "==") {
@@ -93,7 +94,7 @@ impl Node {
         }
     }
 
-    fn relational(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn relational(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let mut left_index = Node::add(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "<=") {
@@ -119,7 +120,7 @@ impl Node {
         }
     }
 
-    fn add(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn add(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let mut left_index = Node::mul(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "+") {
@@ -137,7 +138,7 @@ impl Node {
         }
     }
 
-    fn mul(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn mul(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let mut left_index = Node::unary(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "*") {
@@ -155,7 +156,7 @@ impl Node {
         }
     }
 
-    fn unary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn unary(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let token = &tokens[*index];
         // -x = 0 - x
         if Token::consume(s, token, index, "-") {
@@ -172,7 +173,7 @@ impl Node {
         }
     }
 
-    fn primary(s : &str, tokens : &Vec<Token>, index : &mut usize, tree : &mut Vec<Node>) -> usize {
+    fn primary(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let token = &tokens[*index];
         if Token::consume(s, token, index, "(") {
             let id = Node::expr(s, tokens, index, tree);
@@ -185,7 +186,7 @@ impl Node {
         else{
             match token.kind {
                 TokenKind::TKIdent(lvar_name) => {
-                    *index += lvar_name.len();
+                    *index += 1;
                     tree.push(Node::new_lvar(lvar_name));
                 }
                 _ => {
@@ -196,9 +197,26 @@ impl Node {
         return tree.len() - 1;
     }
 
-    pub fn parse(s : &str, tokens : &Vec<Token>) -> Vec<Vec<Node>> {
+    pub fn parse(s : &str, tokens : &'a Vec<Token>) -> Vec<Vec<Node<'a>>> {
         let mut index = 0;
-        let tree = Node::program(s, tokens, &mut index);
+        let mut tree = Node::program(s, tokens, &mut index);
+        Node::assign_offset(&mut tree);
         tree
+    }
+
+    fn assign_offset(trees : &mut Vec<Vec<Node>>) -> () {
+        let mut map = HashMap::new();
+        for tree in trees {
+            for node in tree {
+                match node.kind {
+                    NodeKind::NDLVa(s, _) => {
+                        let leng = map.len() as i32;
+                        map.entry(s).or_insert(8 * (leng + 1) as i32);
+                        node.kind = NodeKind::NDLVa(s, *map.get(s).unwrap());
+                    }
+                    _ => continue,
+                }
+            }
+        }
     }
 }
