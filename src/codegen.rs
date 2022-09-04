@@ -8,7 +8,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
 
     match node.kind {
         NodeKind::NDRet => {
-            generate_code(ast_tree, &node.left_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
             println!("  pop rax");
             println!("  mov rsp, rbp");
             println!("  pop rbp");
@@ -23,8 +23,8 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             return;
         }
         NodeKind::NDAs => {
-            generate_lval(ast_tree, &node.left_index); // -> rax
-            generate_code(ast_tree, &node.right_index, branch_num); // -> rdi
+            generate_lval(ast_tree, &node.indices.get(0).unwrap()); // -> rax
+            generate_code(ast_tree, &node.indices.get(1).unwrap(), branch_num); // -> rdi
             println!("  pop rdi\n  pop rax");
             println!("  mov [rax], rdi");
             println!("  push rdi");
@@ -35,16 +35,16 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             return;
         }
         NodeKind::NDIf => {
-            generate_code(ast_tree, &node.cond_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
             let use_num = *branch_num;
             *branch_num += 1;
             println!("  pop rax");
             println!("  cmp rax, 0");
             println!("  je  .Lelse{}", use_num);
-            generate_code(ast_tree, &node.left_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(1).unwrap(), branch_num);
             println!("  jmp .Lend{}", use_num);
             println!(".Lelse{}:", use_num);
-            generate_code(ast_tree, &node.right_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(2).unwrap(), branch_num);
             println!(".Lend{}:", use_num);
             return;
         }
@@ -52,11 +52,11 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             let use_num = *branch_num;
             *branch_num += 1;
             println!(".Lbegin{}:", use_num);
-            generate_code(ast_tree, &node.cond_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
             println!("  pop rax");
             println!("  cmp rax, 0");
             println!("  je  .Lend{}", use_num);
-            generate_code(ast_tree, &node.left_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(1).unwrap(), branch_num);
             println!("  jmp .Lbegin{}", use_num);
             println!(".Lend{}:", use_num);
             return;
@@ -64,14 +64,16 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
         NodeKind::NDFor => {
             let use_num = *branch_num;
             *branch_num += 1;
-            generate_code(ast_tree, &node.left_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
             println!(".Lbegin{}:", use_num);
-            generate_code(ast_tree, &node.cond_index, branch_num);
-            println!("  pop rax");
-            println!("  cmp rax, 0");
-            println!("  je  .Lend{}", use_num);
-            generate_code(ast_tree, &node.stmt_index, branch_num);
-            generate_code(ast_tree, &node.right_index, branch_num);
+            generate_code(ast_tree, &node.indices.get(1).unwrap(), branch_num);
+            if node.indices.get(1).unwrap() < &ast_tree.len() {
+                println!("  pop rax");
+                println!("  cmp rax, 0");
+                println!("  je  .Lend{}", use_num);
+            }
+            generate_code(ast_tree, &node.indices.get(3).unwrap(), branch_num);
+            generate_code(ast_tree, &node.indices.get(2).unwrap(), branch_num);
             println!("  jmp .Lbegin{}", use_num);
             println!(".Lend{}:", use_num);
             return;
@@ -79,8 +81,8 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
         _ => (),
     }
 
-    generate_code(ast_tree, &node.left_index, branch_num);
-    generate_code(ast_tree, &node.right_index, branch_num);
+    generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
+    generate_code(ast_tree, &node.indices.get(1).unwrap(), branch_num);
 
     println!("  pop rdi\n  pop rax");
 

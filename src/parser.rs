@@ -1,5 +1,5 @@
 use crate::tokenizer::{Token, TokenKind};
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum NodeKind<'a> {
@@ -23,30 +23,25 @@ pub enum NodeKind<'a> {
 #[derive(Debug)]
 pub struct Node<'a> {
     pub kind : NodeKind<'a>,
-    pub left_index : usize,
-    pub right_index : usize,
-    pub cond_index : usize,
-    pub stmt_index : usize,
+    pub indices : Vec<usize>
 }
 
 impl<'a> Node<'a> {
-    fn new(kind: NodeKind<'a>, left_index: usize, right_index: usize, cond_index : usize) -> Node<'a> {
+    fn new(kind: NodeKind<'a>, indices : Vec<usize>) -> Node<'a> {
         Node {
             kind, 
-            left_index, 
-            right_index,
-            cond_index,
-            stmt_index : std::usize::MAX,
+            indices,
         }
     }
     fn new_num(val : i32) -> Node<'a> {
-        Node::new(NodeKind::NDNum(val), std::usize::MAX, std::usize::MAX, std::usize::MAX)
+        Node::new(NodeKind::NDNum(val), Vec::new())
     }
     fn new_lvar(name : &'a str) -> Node<'a> {
-        Node::new(NodeKind::NDLVa(name, -1), std::usize::MAX, std::usize::MAX, std::usize::MAX)
+        Node::new(NodeKind::NDLVa(name, -1), Vec::new())
     }
     fn new_ret(left_index : usize) -> Node<'a> {
-        Node::new(NodeKind::NDRet, left_index, std::usize::MAX, std::usize::MAX)
+        let vec = vec![left_index];
+        Node::new(NodeKind::NDRet, vec)
     }
 
     fn program(s : &str, tokens : &'a Vec<Token>, index : &mut usize) -> Vec<Vec<Node<'a>>> {
@@ -70,29 +65,30 @@ impl<'a> Node<'a> {
             Token::expect(s, &tokens[*index], index, "(");
             let cond_index = Node::expr(s, tokens, index, tree);
             Token::expect(s, &tokens[*index], index, ")");
-            let left_index = Node::stmt(s, tokens, index, tree);
-            let mut right_index = std::usize::MAX;
+            let stmt_if = Node::stmt(s, tokens, index, tree);
+            let mut stmt_else = std::usize::MAX;
             if Token::consume(s, &tokens[*index], index, "else") {
-                right_index = Node::stmt(s, tokens, index, tree);
+                stmt_else = Node::stmt(s, tokens, index, tree);
             }
-            tree.push(Node::new(NodeKind::NDIf, left_index, right_index, cond_index));
+            let vec = vec![cond_index, stmt_if, stmt_else];
+            tree.push(Node::new(NodeKind::NDIf, vec));
         }
         else if Token::consume(s, token, index, "while") {
             Token::expect(s, &tokens[*index], index, "(");
             let cond_index = Node::expr(s, tokens, index, tree);
             Token::expect(s, &tokens[*index], index, ")");
-            let left_index = Node::stmt(s, tokens, index, tree);
-            let right_index = std::usize::MAX;
-            tree.push(Node::new(NodeKind::NDWh, left_index, right_index, cond_index));
+            let stmt_wh = Node::stmt(s, tokens, index, tree);
+            let vec = vec![cond_index, stmt_wh];
+            tree.push(Node::new(NodeKind::NDWh, vec));
         }
         else if Token::consume(s, token, index, "for") {
-            let mut left_index = std::usize::MAX;
-            let mut right_index = std::usize::MAX;
+            let mut decl_index = std::usize::MAX;
+            let mut manip_index = std::usize::MAX;
             let mut cond_index = std::usize::MAX;
 
             Token::expect(s, &tokens[*index], index, "(");
             if !Token::consume(s, &tokens[*index], index, ";") {
-                left_index = Node::expr(s, tokens, index, tree);
+                decl_index = Node::expr(s, tokens, index, tree);
                 Token::expect(s, &tokens[*index], index, ";");
             }
 
@@ -102,13 +98,13 @@ impl<'a> Node<'a> {
             }
 
             if !Token::consume(s, &tokens[*index], index, ")") {
-                right_index = Node::expr(s, tokens, index, tree);
+                manip_index = Node::expr(s, tokens, index, tree);
                 Token::expect(s, &tokens[*index], index, ")");
             }
 
             let stmt_index = Node::stmt(s, tokens, index, tree);
-            let mut node = Node::new(NodeKind::NDFor, left_index, right_index, cond_index);
-            node.stmt_index = stmt_index;
+            let vec = vec![decl_index, cond_index, manip_index, stmt_index];
+            let node = Node::new(NodeKind::NDFor, vec);
             tree.push(node);
         }   
         else {
@@ -126,89 +122,100 @@ impl<'a> Node<'a> {
         let left_index = Node::equality(s, tokens, index, tree);
         let token = &tokens[*index];
         if Token::consume(s, token, index, "=") {
-            let right_index = Node::assign(s, tokens, index, tree);
-            tree.push(Node::new(NodeKind::NDAs, left_index, right_index, std::usize::MAX));
+            let val_index = Node::assign(s, tokens, index, tree);
+            let vec = vec![left_index, val_index];
+            tree.push(Node::new(NodeKind::NDAs, vec));
         }
         tree.len() - 1
     }
 
     fn equality(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
-        let mut left_index = Node::relational(s, tokens, index, tree);
+        let mut lval_index = Node::relational(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "==") {
-                let right_index = Node::relational(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDEq, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::relational(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDEq, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, "!=") {
-                let right_index = Node::relational(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDNEq, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::relational(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDNEq, vec));
             }   
             else {
                 return tree.len() - 1;
             }
-            left_index = tree.len() - 1;
+            lval_index = tree.len() - 1;
         }
     }
 
     fn relational(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
-        let mut left_index = Node::add(s, tokens, index, tree);
+        let mut lval_index = Node::add(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "<=") {
-                let right_index = Node::add(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDLeEq, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::add(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDLeEq, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, "<") {
-                let right_index = Node::add(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDLe, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::add(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDLe, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, ">=") {
-                let right_index = Node::add(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDLeEq, right_index, left_index, std::usize::MAX));
+                let rval_index = Node::add(s, tokens, index, tree);
+                let vec = vec![rval_index, lval_index];
+                tree.push(Node::new(NodeKind::NDLeEq, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, ">") {
-                let right_index = Node::add(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDLe, right_index, left_index, std::usize::MAX));
+                let rval_index = Node::add(s, tokens, index, tree);
+                let vec = vec![rval_index, lval_index];
+                tree.push(Node::new(NodeKind::NDLe, vec));
             }   
             else {
                 return tree.len() - 1;
             }
-            left_index = tree.len() - 1;
+            lval_index = tree.len() - 1;
         }
     }
 
     fn add(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
-        let mut left_index = Node::mul(s, tokens, index, tree);
+        let mut lval_index = Node::mul(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "+") {
-                let right_index = Node::mul(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDAdd, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::mul(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDAdd, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, "-") {
-                let right_index = Node::mul(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDSub, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::mul(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDSub, vec));
             }   
             else {
                 return tree.len() - 1;
             }
-            left_index = tree.len() - 1;
+            lval_index = tree.len() - 1;
         }
     }
 
     fn mul(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
-        let mut left_index = Node::unary(s, tokens, index, tree);
+        let mut lval_index = Node::unary(s, tokens, index, tree);
         loop {
             if Token::consume(s, &tokens[*index], index, "*") {
-                let right_index = Node::unary(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDMul, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::unary(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDMul, vec));
             }   
             else if Token::consume(s, &tokens[*index], index, "/") {
-                let right_index = Node::unary(s, tokens, index, tree);
-                tree.push(Node::new(NodeKind::NDDiv, left_index, right_index, std::usize::MAX));
+                let rval_index = Node::unary(s, tokens, index, tree);
+                let vec = vec![lval_index, rval_index];
+                tree.push(Node::new(NodeKind::NDDiv, vec));
             }   
             else {
                 return tree.len() - 1;
             }
-            left_index = tree.len() - 1;
+            lval_index = tree.len() - 1;
         }
     }
 
@@ -217,10 +224,11 @@ impl<'a> Node<'a> {
         // -x = 0 - x
         if Token::consume(s, token, index, "-") {
             let lnode = Node::new_num(0);
-            let left_index = tree.len();
+            let lval_index = tree.len();
             tree.push(lnode);
-            let right_index = Node::primary(s, tokens, index, tree);
-            tree.push(Node::new(NodeKind::NDSub, left_index, right_index, std::usize::MAX));
+            let rval_index = Node::primary(s, tokens, index, tree);
+            let vec = vec![lval_index, rval_index];
+            tree.push(Node::new(NodeKind::NDSub, vec));
             tree.len() - 1
         }
         else {
