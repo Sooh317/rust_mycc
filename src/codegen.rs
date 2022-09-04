@@ -86,6 +86,11 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!("  push rax");
             return;
         }
+        NodeKind::NDFunc(func) => {
+            println!("  call {}", func);
+            println!("  push rax");
+            return;
+        }
         _ => (),
     }
 

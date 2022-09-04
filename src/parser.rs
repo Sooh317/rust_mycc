@@ -18,6 +18,7 @@ pub enum NodeKind<'a> {
     NDWh, 
     NDFor,
     NDBlock, // code block
+    NDFunc(&'a str),
     NDNum(i32),
 }
 
@@ -260,7 +261,13 @@ impl<'a> Node<'a> {
             match token.kind {
                 TokenKind::TKIdent(lvar_name) => {
                     *index += 1;
-                    tree.push(Node::new_lvar(lvar_name));
+                    if Token::consume(s, &tokens[*index], index, "(") {
+                        tree.push(Node::new(NodeKind::NDFunc(lvar_name), Vec::new()));
+                        Token::expect(s, &tokens[*index], index, ")");
+                    }
+                    else {
+                        tree.push(Node::new_lvar(lvar_name));
+                    }
                 }
                 _ => {
                     tree.push(Node::new_num(Token::expect_number(s, token, index)));
