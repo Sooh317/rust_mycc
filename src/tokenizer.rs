@@ -100,7 +100,7 @@ impl<'a> Token<'a>{
                     next = i + 1 + j;
                     break;
                 }
-                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" {
+                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" || &s[i..next] == "while" {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..next]), i, next));
                 }
                 else {

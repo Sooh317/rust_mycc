@@ -15,6 +15,7 @@ pub enum NodeKind<'a> {
     NDNEq,
     NDRet,
     NDIf, 
+    NDWh, 
     NDNum(i32),
 }
 
@@ -72,6 +73,14 @@ impl<'a> Node<'a> {
                 right_index = Node::stmt(s, tokens, index, tree);
             }
             tree.push(Node::new(NodeKind::NDIf, left_index, right_index, cond_index));
+        }
+        else if Token::consume(s, token, index, "while") {
+            Token::expect(s, &tokens[*index], index, "(");
+            let cond_index = Node::expr(s, tokens, index, tree);
+            Token::expect(s, &tokens[*index], index, ")");
+            let left_index = Node::stmt(s, tokens, index, tree);
+            let right_index = std::usize::MAX;
+            tree.push(Node::new(NodeKind::NDWh, left_index, right_index, cond_index));
         }
         else {
             Node::expr(s, tokens, index, tree);

@@ -46,6 +46,20 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!(".Lelse{}:", use_num);
             generate_code(ast_tree, &node.right_index, branch_num);
             println!(".Lend{}:", use_num);
+            return;
+        }
+        NodeKind::NDWh => {
+            let use_num = *branch_num;
+            *branch_num += 1;
+            println!(".Lbegin{}:", use_num);
+            generate_code(ast_tree, &node.cond_index, branch_num);
+            println!("  pop rax");
+            println!("  cmp rax, 0");
+            println!("  je  .Lend{}", use_num);
+            generate_code(ast_tree, &node.left_index, branch_num);
+            println!("  jmp .Lbegin{}", use_num);
+            println!(".Lend{}:", use_num);
+            return;
         }
         _ => (),
     }
