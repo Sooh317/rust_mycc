@@ -295,13 +295,14 @@ impl<'a> Node<'a> {
                 match node.kind {
                     NodeKind::NDLVa(s, _) => {
                         let leng = map.len() as i32;
-                        map.entry(s).or_insert(8 * (leng + 1) as i32);
+                        map.entry(s).or_insert((leng + 1) * 8);
                         node.kind = NodeKind::NDLVa(s, *map.get(s).unwrap());
                     }
                     _ => continue,
                 }
             }
         }
-        map.len() as i32
+        let lvar_region = 8 * map.len() as i32;
+        (lvar_region + 15) / 16 * 16
     }
 }

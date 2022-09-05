@@ -87,6 +87,22 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             return;
         }
         NodeKind::NDFunc(func) => {
+            if node.indices.len() <= 6 {
+                for i in 0..node.indices.len() {
+                    generate_code(ast_tree, &node.indices.get(i).unwrap(), branch_num);
+                }
+                for i in (0..node.indices.len()).rev() {
+                    match i {
+                        0 => println!("  pop rdi"),
+                        1 => println!("  pop rsi"),
+                        2 => println!("  pop rdx"),
+                        3 => println!("  pop rcx"),
+                        4 => println!("  pop r8"),
+                        5 => println!("  pop r9"),
+                        _ => std::process::exit(1),
+                    }
+                }
+            }
             println!("  call {}", func);
             println!("  push rax");
             return;
