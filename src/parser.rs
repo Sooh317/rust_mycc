@@ -262,8 +262,12 @@ impl<'a> Node<'a> {
                 TokenKind::TKIdent(lvar_name) => {
                     *index += 1;
                     if Token::consume(s, &tokens[*index], index, "(") {
-                        tree.push(Node::new(NodeKind::NDFunc(lvar_name), Vec::new()));
-                        Token::expect(s, &tokens[*index], index, ")");
+                        let mut vec : Vec<usize> = Vec::new();
+                        while !Token::consume(s, &tokens[*index], index, ")") {
+                            vec.push(Node::expr(s, tokens, index, tree));
+                            Token::consume(s, &tokens[*index], index, ",");
+                        }
+                        tree.push(Node::new(NodeKind::NDFunc(lvar_name), vec));
                     }
                     else {
                         tree.push(Node::new_lvar(lvar_name));
@@ -277,14 +281,14 @@ impl<'a> Node<'a> {
         tree.len() - 1
     }
 
-    pub fn parse(s : &str, tokens : &'a Vec<Token>) -> Vec<Vec<Node<'a>>> {
+    pub fn parse(s : &str, tokens : &'a Vec<Token>) -> (Vec<Vec<Node<'a>>>, i32) {
         let mut index = 0;
         let mut tree = Node::program(s, tokens, &mut index);
-        Node::assign_offset(&mut tree);
-        tree
+        let var_num = Node::assign_offset(&mut tree);
+        (tree, var_num)
     }
 
-    fn assign_offset(trees : &mut Vec<Vec<Node>>) {
+    fn assign_offset(trees : &mut Vec<Vec<Node>>) -> i32 {
         let mut map = HashMap::new();
         for tree in trees {
             for node in tree {
@@ -298,5 +302,6 @@ impl<'a> Node<'a> {
                 }
             }
         }
+        map.len() as i32
     }
 }
