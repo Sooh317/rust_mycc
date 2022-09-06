@@ -70,4 +70,6 @@ assert_func 'main(){a = 5; b = 6; foo3(a, a * b, - a * b);}'
 assert_func 'main(){a = 5; b = 6; foo4(a + b, a - b, a * b, - a * b);}'
 assert_func 'main(){a = 5; b = 6; c = 100; foo5(a + b, c + -c + c + -c + c, a * b, b * c, c * a);}'
 assert 55 'fib(a){ if(a <= 1){return a;} else{return fib(a - 1) + fib(a - 2);}} main(){return fib(10);}'
+assert 3 'main(){x = 3; y = &x; return *y;}'
+assert 3 'main(){ x = 3; y = 5; z = &y + 8; return *z;}'
 echo OK

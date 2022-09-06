@@ -135,6 +135,17 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!("  ret");
             return;
         }
+        NodeKind::NDAddr => {
+            generate_lval(ast_tree, node.indices.first().unwrap());
+            return;
+        }
+        NodeKind::NDDeref => {
+            generate_code(ast_tree, node.indices.first().unwrap(), branch_num);
+            println!("  pop rax");
+            println!("  mov rax, [rax]");
+            println!("  push rax");
+            return;
+        }
         _ => (),
     }
 

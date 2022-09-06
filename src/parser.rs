@@ -20,6 +20,8 @@ pub enum NodeKind<'a> {
     NDBlock, // code block
     NDFnCall(&'a str),
     NDFnDef(&'a str, Vec<&'a str>, Vec<i32>, i32), // (func name, argument lists, argument offsets, necessary memory for local variables)
+    NDAddr, 
+    NDDeref,
     NDNum(i32),
 }
 
@@ -263,20 +265,31 @@ impl<'a> Node<'a> {
 
     fn unary(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let token = &tokens[*index];
+        if Token::consume(s, token, index, "*") {
+            let addr_index = vec![Node::unary(s, tokens, index, tree)];
+            tree.push(Node::new(NodeKind::NDDeref, addr_index));
+        }
+        else if Token::consume(s, token, index, "&") {
+            let var_index = vec![Node::unary(s, tokens, index, tree)];
+            tree.push(Node::new(NodeKind::NDAddr, var_index));
+        }
         // -x = 0 - x
-        if Token::consume(s, token, index, "-") {
+        else if Token::consume(s, token, index, "-") {
             let lnode = Node::new_num(0);
             let lval_index = tree.len();
             tree.push(lnode);
             let rval_index = Node::primary(s, tokens, index, tree);
             let vec = vec![lval_index, rval_index];
             tree.push(Node::new(NodeKind::NDSub, vec));
-            tree.len() - 1
+        }
+        else if Token::consume(s, token, index, "+") {
+            Node::primary(s, tokens, index, tree);
         }
         else {
-            Token::consume(s, token, index, "+");
-            Node::primary(s, tokens, index, tree)
+            Node::primary(s, tokens, index, tree);
         }
+
+        tree.len() - 1
     }
 
     fn primary(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {

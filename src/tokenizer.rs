@@ -81,7 +81,7 @@ impl<'a> Token<'a>{
             if next > i || char::is_whitespace(c) {
                 continue;
             }
-            else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ';' || c == '{' || c == '}' || c == ',' {
+            else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ';' || c == '{' || c == '}' || c == ',' || c == '&' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
             }
             else if c == '>' || c == '<' || c == '=' || c == '!' {
