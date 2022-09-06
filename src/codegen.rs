@@ -1,4 +1,4 @@
-use crate::parser::{NodeKind, Ast};
+use crate::parser::{NodeKind, Ast, Type};
 
 pub fn generate_code(ast : &Ast, index : &usize, branch_num : &mut i32) {
     if ast.tree.len() <= *index { return; }
@@ -16,14 +16,14 @@ pub fn generate_code(ast : &Ast, index : &usize, branch_num : &mut i32) {
             return;
         }
         NodeKind::NDLVa(_) => { // When variable occurs in the context of expressions, the value is stored in the stack.
-            generate_lval(ast, index);
+            generate_lval(ast, index, branch_num);
             println!("  pop rax");
             println!("  mov rax, [rax]");
             println!("  push rax");
             return;
         }
         NodeKind::NDAs => {
-            generate_lval(ast, node.indices.first().unwrap()); // -> rax
+            generate_lval(ast, node.indices.first().unwrap(), branch_num); // -> rax
             generate_code(ast, node.indices.get(1).unwrap(), branch_num); // -> rdi
             println!("  pop rdi\n  pop rax");
             println!("  mov [rax], rdi");
@@ -136,7 +136,7 @@ pub fn generate_code(ast : &Ast, index : &usize, branch_num : &mut i32) {
             return;
         }
         NodeKind::NDAddr => {
-            generate_lval(ast, node.indices.first().unwrap());
+            generate_lval(ast, node.indices.first().unwrap(), branch_num);
             return;
         }
         NodeKind::NDDeref => {
@@ -194,7 +194,7 @@ pub fn generate_code(ast : &Ast, index : &usize, branch_num : &mut i32) {
 }
 
 // push the address of a variable on the stack
-fn generate_lval(ast : &Ast, index : &usize) {
+fn generate_lval(ast : &Ast, index : &usize, branch_num : &mut i32) {
     let node = &ast.tree[*index];
     match node.kind {
         NodeKind::NDLVa(name) => {
@@ -202,9 +202,13 @@ fn generate_lval(ast : &Ast, index : &usize) {
             println!("  sub rax, {}", ast.map.get(name).unwrap().offset);
             println!("  push rax");
         }
+        NodeKind::NDDeref => {
+            generate_code(ast, node.indices.first().unwrap(), branch_num);
+        }
         _ => {
             eprintln!("代入の左辺値が変数ではありません");
             std::process::exit(1);
         }
     }
 }
+

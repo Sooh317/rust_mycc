@@ -40,10 +40,10 @@ pub struct Ast<'a> {
     pub region : i32
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Type {
     Int, 
-    // Ptr(Box<Type>),
+    Ptr(Box<Type>),
     Init,
 }
 
@@ -131,7 +131,6 @@ impl<'a> Node<'a> {
                     Token::consume(s, &tokens[*index], index, ",");
                 }
                 map.insert(func_name, VarInfo { ty: func_type, offset: -1 });
-
                 Token::expect(s, &tokens[*index], index, "{");
                 let mut func_code : Vec<usize> = Vec::new();
                 while !Token::consume(s, &tokens[*index], index, "}") {
@@ -359,8 +358,11 @@ impl<'a> Node<'a> {
             return id;
         }
         else if Token::consume(s, token, index, "int") {
-            let ty = Type::Int;
+            let mut ty = Type::Int;
             *region += 8;
+            while Token::consume(s, &tokens[*index], index, "*") {
+                ty = Type::Ptr(Box::new(ty));
+            }
             let token = &tokens[*index];
             match token.kind {
                 TokenKind::TKIdent(lvar_name) => {

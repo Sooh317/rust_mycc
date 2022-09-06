@@ -10,7 +10,7 @@ fn main() {
         eprintln!("引数の個数が正しくありません\n");
         process::exit(1);
     }
-
+    
     let expression = &args[1];
     let tokens = tokenizer::Token::tokenize(expression);
     // println!("{:?}", tokens);
@@ -19,7 +19,7 @@ fn main() {
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
-    
+
     let mut branch_num = 0;
     for ast in asts {
         let index = ast.tree.len() - 1;
