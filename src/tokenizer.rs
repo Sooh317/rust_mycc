@@ -1,5 +1,3 @@
-
-
 #[derive(PartialEq, Eq)]
 #[derive(Debug)]
 pub enum TokenKind<'a> {
@@ -100,7 +98,7 @@ impl<'a> Token<'a>{
                     next = i + 1 + j;
                     break;
                 }
-                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" || &s[i..next] == "while" || &s[i..next] == "for" {
+                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" || &s[i..next] == "while" || &s[i..next] == "for" || &s[i..next] == "int" {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..next]), i, next));
                 }
                 else {

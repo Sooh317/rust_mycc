@@ -14,16 +14,16 @@ fn main() {
     let expression = &args[1];
     let tokens = tokenizer::Token::tokenize(expression);
     // println!("{:?}", tokens);
-    let ast_trees = parser::Node::parse(expression, &tokens);
-    // println!("{:?}", ast_trees);
+    let asts = parser::Node::parse(expression, &tokens);
+    // println!("{:?}", asts);
 
     println!(".intel_syntax noprefix");
     println!(".globl main");
     
     let mut branch_num = 0;
-    for ast_tree in ast_trees {
-        let index = ast_tree.len() - 1;
-        codegen::generate_code(&ast_tree, &index, &mut branch_num);
+    for ast in asts {
+        let index = ast.tree.len() - 1;
+        codegen::generate_code(&ast, &index, &mut branch_num);
         println!("  pop rax"); // pop return value of the previously executed function
     }
 
