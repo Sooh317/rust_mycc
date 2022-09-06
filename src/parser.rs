@@ -327,7 +327,7 @@ impl<'a> Node<'a> {
     }
 
     fn offset_calculation(functions : &mut Vec<Vec<Node>>) {
-        let (mut maps, offsets) = Node::process_argument_offset(&functions);
+        let (mut maps, offsets) = Node::process_argument_offset(functions);
         let length = functions.len();
         for i in 0..length {
             let region = Node::assign_offset(&mut functions[i], &mut maps[i]);
