@@ -66,7 +66,7 @@ impl<'a> Token<'a>{
         }
     }
 
-    fn error_msg(s : &str, pos : usize, msg : &str) {
+    pub fn error_msg(s : &str, pos : usize, msg : &str) {
         eprintln!("{}", s);
         eprintln!("{}^{}", " ".repeat(pos), msg);
         std::process::exit(1);

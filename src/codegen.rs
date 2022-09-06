@@ -6,7 +6,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
     let node = &ast_tree[*index];
     // println!("{:?}", node);
 
-    match node.kind {
+    match &node.kind {
         NodeKind::NDRet => {
             generate_code(ast_tree, &node.indices.get(0).unwrap(), branch_num);
             println!("  pop rax");
@@ -86,7 +86,7 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
             println!("  push rax");
             return;
         }
-        NodeKind::NDFunc(func) => {
+        NodeKind::NDFnCall(func) => {
             if node.indices.len() <= 6 {
                 for i in 0..node.indices.len() {
                     generate_code(ast_tree, &node.indices.get(i).unwrap(), branch_num);
@@ -102,9 +102,37 @@ pub fn generate_code(ast_tree : &Vec<Node>, index : &usize, branch_num : &mut i3
                         _ => std::process::exit(1),
                     }
                 }
+
             }
             println!("  call {}", func);
             println!("  push rax");
+            return;
+        }
+        NodeKind::NDFnDef(func_name, _, offset, region) => {
+            println!("{}:", func_name);
+            println!("  push rbp");
+            println!("  mov rbp, rsp");
+            println!("  sub rsp, {}", region); // lvar_num is a multiple of 16
+            for i in 0..offset.len() {
+                println!("  mov rax, rbp");
+                println!("  sub rax, {}", offset[i]);
+                match i {
+                    0 => println!("  mov [rax], rdi"),
+                    1 => println!("  mov [rax], rsi"),
+                    2 => println!("  mov [rax], rdx"),
+                    3 => println!("  mov [rax], rcx"),
+                    4 => println!("  mov [rax], r8"),
+                    5 => println!("  mov [rax], r9"),
+                    _ => std::process::exit(1),
+                }
+            }
+            for i in 0..node.indices.len() {
+                generate_code(ast_tree, &node.indices.get(i).unwrap(), branch_num);
+                println!("  pop rax");
+            }
+            println!("  mov rsp, rbp");
+            println!("  pop rbp");
+            println!("  ret");
             return;
         }
         _ => (),

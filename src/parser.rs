@@ -18,7 +18,8 @@ pub enum NodeKind<'a> {
     NDWh, 
     NDFor,
     NDBlock, // code block
-    NDFunc(&'a str),
+    NDFnCall(&'a str),
+    NDFnDef(&'a str, Vec<&'a str>, Vec<i32>, i32), // (func name, argument lists, argument offsets, necessary memory for local variables)
     NDNum(i32),
 }
 
@@ -50,11 +51,42 @@ impl<'a> Node<'a> {
         let mut code : Vec<Vec<Node>> = Vec::new();
         while !Token::at_eof(&tokens[*index]) {
             let mut tree : Vec<Node> = Vec::new();
-            Node::stmt(s, tokens, index, &mut tree);
+            Node::definition(s, tokens, index, &mut tree);
             code.push(tree)
         }
         code
     }
+
+    fn definition(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
+        let token = &tokens[*index];
+        match token.kind {
+            TokenKind::TKIdent(func_name) => {
+                *index += 1;
+                Token::expect(s, &tokens[*index], index, "(");
+                let mut arguments : Vec<&'a str> = Vec::new();
+                while !Token::consume(s, &tokens[*index], index, ")") {
+                    let token = &tokens[*index];
+                    *index += 1;
+                    match token.kind {
+                        TokenKind::TKIdent(arg) =>  arguments.push(arg),
+                        _ => Token::error_msg(s, token.index, "変数ではありません"),
+                    }
+                    Token::consume(s, &tokens[*index], index, ",");
+                }
+                Token::expect(s, &tokens[*index], index, "{");
+                let mut func_code : Vec<usize> = Vec::new();
+                while !Token::consume(s, &tokens[*index], index, "}") {
+                    func_code.push(Node::stmt(s, tokens, index, tree));
+                }
+                tree.push(Node::new(NodeKind::NDFnDef(func_name, arguments, Vec::new(), -1), func_code));
+            }
+            _ => {
+                Token::error_msg(s, token.index, "関数定義ではありません");
+            }
+        }
+        tree.len() - 1
+    }
+
 
     fn stmt(s : &str, tokens : &'a Vec<Token>, index : &mut usize, tree : &mut Vec<Node<'a>>) -> usize {
         let token = &tokens[*index];
@@ -267,7 +299,7 @@ impl<'a> Node<'a> {
                             vec.push(Node::expr(s, tokens, index, tree));
                             Token::consume(s, &tokens[*index], index, ",");
                         }
-                        tree.push(Node::new(NodeKind::NDFunc(lvar_name), vec));
+                        tree.push(Node::new(NodeKind::NDFnCall(lvar_name), vec));
                     }
                     else {
                         tree.push(Node::new_lvar(lvar_name));
@@ -281,28 +313,67 @@ impl<'a> Node<'a> {
         tree.len() - 1
     }
 
-    pub fn parse(s : &str, tokens : &'a Vec<Token>) -> (Vec<Vec<Node<'a>>>, i32) {
+    pub fn parse(s : &str, tokens : &'a Vec<Token>) -> Vec<Vec<Node<'a>>> {
         let mut index = 0;
-        let mut tree = Node::program(s, tokens, &mut index);
-        let var_num = Node::assign_offset(&mut tree);
-        (tree, var_num)
+        let mut functions = Node::program(s, tokens, &mut index);
+
+        Node::offset_calculation(&mut functions);
+        // let mut maps = Node::process_argument_offset(&functions);
+        // let length = functions.len();
+        // for i in 0..length {
+        //     Node::assign_offset(&mut functions[i], &mut maps[i]);
+        // }
+        functions
     }
 
-    fn assign_offset(trees : &mut Vec<Vec<Node>>) -> i32 {
-        let mut map = HashMap::new();
-        for tree in trees {
-            for node in tree {
-                match node.kind {
-                    NodeKind::NDLVa(s, _) => {
-                        let leng = map.len() as i32;
-                        map.entry(s).or_insert((leng + 1) * 8);
-                        node.kind = NodeKind::NDLVa(s, *map.get(s).unwrap());
-                    }
-                    _ => continue,
-                }
+    fn offset_calculation(functions : &mut Vec<Vec<Node>>) {
+        let (mut maps, offsets) = Node::process_argument_offset(&functions);
+        let length = functions.len();
+        for i in 0..length {
+            let region = Node::assign_offset(&mut functions[i], &mut maps[i]);
+            let last_index = functions[i].len() - 1;
+            if let NodeKind::NDFnDef(name, _, _, _) = functions[i][last_index].kind {
+                functions[i][last_index].kind = NodeKind::NDFnDef(name, Vec::new(), offsets[i].clone(), region);
             }
         }
-        let lvar_region = 8 * map.len() as i32;
-        (lvar_region + 15) / 16 * 16
+
+    }
+
+    fn process_argument_offset(functions : &Vec<Vec<Node<'a>>>) -> (Vec<HashMap<&'a str, i32>>, Vec<Vec<i32>>) {
+        let mut vec_map : Vec<HashMap<&'a str, i32>> = Vec::new();
+        let mut vec_offset : Vec<Vec<i32>> = Vec::new();
+        for function in functions {
+            let mut map = HashMap::new();
+            let mut offset = Vec::new();
+            let argument = &function.last().unwrap().kind;
+            match &argument {
+                NodeKind::NDFnDef(_, args, _, _) => {
+                    for arg in args {
+                        let leng = map.len() as i32;
+                        map.entry(*arg).or_insert((leng + 1) * 8);
+                        offset.push((leng + 1) * 8);
+                    }
+                }
+                _ => std::process::exit(1),
+            }
+            vec_map.push(map);
+            vec_offset.push(offset);
+        }
+        (vec_map, vec_offset)
+    }
+
+    fn assign_offset(functions : &mut Vec<Node<'a>>, map : &mut HashMap<&'a str, i32>) -> i32 {
+        for node in functions {
+            match node.kind {
+                NodeKind::NDLVa(s, _) => {
+                    let leng = map.len() as i32;
+                    map.entry(s).or_insert((leng + 1) * 8);
+                    node.kind = NodeKind::NDLVa(s, *map.get(s).unwrap());
+                }
+                _ => continue,
+            }
+        }
+        let region = map.len() as i32 * 8;
+        (region + 15) / 16 * 16
     }
 }
