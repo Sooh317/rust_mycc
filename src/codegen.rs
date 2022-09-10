@@ -1,4 +1,4 @@
-use crate::parser::{NodeKind, Ast, Type};
+use crate::parser::{NodeKind, Ast};
 
 pub fn generate_code(ast : &Ast, index : &usize, branch_num : &mut i32) {
     if ast.tree.len() <= *index { return; }

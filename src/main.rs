@@ -2,6 +2,7 @@ use std::{env, process};
 mod tokenizer;
 mod parser;
 mod codegen;
+mod ty;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -24,7 +25,7 @@ fn main() {
     for ast in asts {
         let index = ast.tree.len() - 1;
         codegen::generate_code(&ast, &index, &mut branch_num);
-        println!("  pop rax"); // pop return value of the previously executed function
+        // println!("  pop rax"); // pop return value of the previously executed function
     }
 
 }
