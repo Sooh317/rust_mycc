@@ -79,7 +79,7 @@ impl<'a> Token<'a>{
             if next > i || char::is_whitespace(c) {
                 continue;
             }
-            else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == ';' || c == '{' || c == '}' || c == ',' || c == '&' {
+            else if c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')' || c == '[' || c == ']' || c == ';' || c == '{' || c == '}' || c == ',' || c == '&' {
                 sequence.push(Token::new(TokenKind::TKReserved(&s[i..i+1]), i, i + 1));
             }
             else if c == '>' || c == '<' || c == '=' || c == '!' {
@@ -98,7 +98,7 @@ impl<'a> Token<'a>{
                     next = i + 1 + j;
                     break;
                 }
-                if &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" || &s[i..next] == "while" || &s[i..next] == "for" || &s[i..next] == "int" {
+                if &s[i..next] == "sizeof" || &s[i..next] == "return" || &s[i..next] == "if" || &s[i..next] == "else" || &s[i..next] == "while" || &s[i..next] == "for" || &s[i..next] == "int" {
                     sequence.push(Token::new(TokenKind::TKReserved(&s[i..next]), i, next));
                 }
                 else {

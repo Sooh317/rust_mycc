@@ -1,6 +1,6 @@
 use crate::tokenizer::{Token, TokenKind};
 use std::{collections::HashMap, vec};
-use crate::ty::Type;
+use crate::ty::{Type, type_of_node, type_to_size};
 use crate::ty;
 
 #[derive(PartialEq, Eq, Debug)]
@@ -395,6 +395,11 @@ impl<'a> Node<'a> {
             let var_index = vec![Node::unary(s, tokens, index, tree, map, region)];
             tree.push(Node::new_init(NodeKind::NDAddr, var_index));
         }
+        else if Token::consume(s, token, index, "sizeof") {
+            let child_index = Node::unary(s, tokens, index, tree, map, region);
+            type_of_node(tree, child_index);
+            tree.push(Node::new_num(ty::type_to_size(&tree[child_index].ty), Type::Int));
+        }
         // -x = 0 - x
         else if Token::consume(s, token, index, "-") {
             let lnode = Node::new_num(0, Type::Int); // we only have int type now
@@ -425,10 +430,10 @@ impl<'a> Node<'a> {
         }
         else if Token::consume(s, token, index, "int") {
             let mut ty = Type::Int;
-            *region += 8;
             while Token::consume(s, &tokens[*index], index, "*") {
                 ty = Type::Ptr(Box::new(ty));
             }
+            *region += ty::type_to_offset(&ty);
             let token = &tokens[*index];
             match token.kind {
                 TokenKind::TKIdent(lvar_name) => {

@@ -3,6 +3,7 @@ use crate::parser::{NodeKind, Node};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Type {
     Int, 
+    Array,
     Ptr(Box<Type>),
     Init,
 }
@@ -10,6 +11,15 @@ pub enum Type {
 pub fn type_to_offset(ty : &Type) -> i32 {
     match ty {
         Type::Int => 8,
+        Type::Ptr(_) => 8,
+        _ => -1
+    }
+}
+
+pub fn type_to_size(ty : &Type) -> i32 {
+    match ty {
+        Type::Int => 4,
+        Type::Ptr(_) => 8,
         _ => -1
     }
 }
